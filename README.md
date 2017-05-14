@@ -21,3 +21,12 @@ wget https://raw.githubusercontent.com/thelastparadox/mediacentreinstaller/maste
 
 ./mediacentreinstaller.sh
 ```
+
+---
+
+## Thanks
+
+This script relies on the following software:
+- Docker Comunity Edition (<a href="https://www.docker.com/">site</a>)
+- Docker images from <a href="https://linuxserver.io">linuxserver.io</a>
+- JQ which is an excellent tool for parsing the JSON config file (<a href="https://stedolan.github.io/jq/">site</a>)

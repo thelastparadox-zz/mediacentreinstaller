@@ -24,12 +24,19 @@ CONTINUE=true
 LOG_FILE="$(dirname $0)/${THEME_NAME_SHORT_NAME,,}-log-$(date +%Y-%m-%d).log"
 LOGFILE_DATEFORMAT="+%Y-%m-%d:%H:%M:%S"
 
-# Setup Quiet Mode
-if [[ CONFIG_QUIET_MODE == true ]]; then
-  QUIET_MODE="> /dev/null 2>&1"
-else
-  QUIET_MODE=""
+# Install Tools required for parsing JSON
+JQ_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' jq|grep "install ok installed")
+
+if [[ $JQ_INSTALLED == *"install ok installed"* ]]; then
+	echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Installing JQ to parse config" >> $LOG_FILE
+	INSTALL_JQ="$(sudo apt-get update 2>&1 && sudo apt-get -y install jq 2>&1)"
 fi
+
+# Get Configuration
+CONFIG="$(curl -s 'https://raw.githubusercontent.com/thelastparadox/mediacentreinstaller/master/config/config.json')"
+SOFTWARE=$(echo $CONFIG | jq .software[0])
+# Proccess JSON into array
+SOFTWARE_NUM_ITEMS=$(echo $CONFIG | jq '.software | length')
 
 # Intro
 whiptail --title "$THEME_NAME_LONG_NAME $VERSION" --msgbox "Welcome to the $THEME_NAME_LONG_NAME. This guided installer will download, install and configure any software you choose by using the CE edition of Docker. Please click OK to continue." 12 78
@@ -49,21 +56,24 @@ else
   echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE OS confirmed as Ubuntu" >> $LOG_FILE
 fi
 
+# Generate Install Software List
+SOFTWARESELECTLIST=()
+for ((i=0; i<$SOFTWARE_NUM_ITEMS; i++))
+do
+    SOFTWARESELECTLIST+=("$(echo $CONFIG | jq .software[$i].name)" "$(echo $CONFIG | jq .software[$i].description)" "$(echo $CONFIG | jq .software[$i].installselected)")
+done
+
+echo "NAME: $(echo $CONFIG | jq .software[0].name)"
+exit
+
 # Select INSTALL_CHOICES to Install
 if [[ $CONTINUE == true ]]; then
-  INSTALL_CHOICES=$(whiptail --title "Select Software" --checklist \
-  "Select the software you would like to install..." 20 60 8 \
-  "Sonarr" "TV Show Manager" ON \
-  "Radarr" "Movie Manager" ON \
-  "Deluge" "BitTorrent Download Manager" ON \
-  "Plex" "Media Centre" ON \
-  "Jackett" "Torrent Indexer" ON \
-  "Cardigann" "Torrent Indexer (no longer supported)" ON \
-  "Portainer" "Dahsboard for managing INSTALL_CHOICES" OFF \
-  3>&1 1>&2 2>&3)
+  INSTALL_CHOICES=$(whiptail --title "Select Software" --checklist "Select the software you would like to install..." 20 60 8 ${SOFTWARESELECTLIST[@]} 3>&1 1>&2 2>&3)
   INSTALL_CHOICES="${INSTALL_CHOICES//\"/}"
   echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Install choices are: $INSTALL_CHOICES" >> $LOG_FILE
 fi
+
+exit
 
 if [[ $CONTINUE == true && $INSTALL_CHOICES != "" ]]; then
   if (whiptail --title "Usage of VPN" --yesno "Would you like to run all traffic via a VPN?." 8 78); then
