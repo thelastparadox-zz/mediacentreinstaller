@@ -34,8 +34,6 @@ fi
 
 # Get Configuration
 CONFIG="$(curl -s 'https://raw.githubusercontent.com/thelastparadox/mediacentreinstaller/master/config/config.json')"
-SOFTWARE=$(echo $CONFIG | jq .software[0])
-# Proccess JSON into array
 SOFTWARE_NUM_ITEMS=$(echo $CONFIG | jq '.software | length')
 
 # Intro
@@ -60,20 +58,19 @@ fi
 SOFTWARESELECTLIST=()
 for ((i=0; i<$SOFTWARE_NUM_ITEMS; i++))
 do
-    SOFTWARESELECTLIST+=("$(echo $CONFIG | jq .software[$i].name)" "$(echo $CONFIG | jq .software[$i].description)" "$(echo $CONFIG | jq .software[$i].installselected)")
+    #SOFTWARESELECTLIST+="\"$(echo $CONFIG | jq -r .software[$i].name)\" \"$(echo $CONFIG | jq -r .software[$i].description)\" $(echo $CONFIG | jq -r .software[$i].installselected) "
+    SOFTWARESELECTLIST+="\"$(echo $CONFIG | jq -r .software[$i].name)\" " 
 done
 
-echo "NAME: $(echo $CONFIG | jq .software[0].name)"
-exit
+echo $SOFTWARESELECTLIST
+#exit
 
 # Select INSTALL_CHOICES to Install
 if [[ $CONTINUE == true ]]; then
-  INSTALL_CHOICES=$(whiptail --title "Select Software" --checklist "Select the software you would like to install..." 20 60 8 ${SOFTWARESELECTLIST[@]} 3>&1 1>&2 2>&3)
+  INSTALL_CHOICES=$(whiptail --title "Select Software" --checklist "Select the software you would like to install..." 20 60 8 $SOFTWARESELECTLIST 3>&1 1>&2 2>&3)
   INSTALL_CHOICES="${INSTALL_CHOICES//\"/}"
   echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Install choices are: $INSTALL_CHOICES" >> $LOG_FILE
 fi
-
-exit
 
 if [[ $CONTINUE == true && $INSTALL_CHOICES != "" ]]; then
   if (whiptail --title "Usage of VPN" --yesno "Would you like to run all traffic via a VPN?." 8 78); then

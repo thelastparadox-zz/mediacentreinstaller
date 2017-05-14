@@ -7,7 +7,7 @@
 			"installscriptdefault": "sudo docker run -d  --name=portainer --restart=always -p 9000:9000  -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer"
 		},
 		{
-			"name": "Portainer",
+			"name": "Sonarr",
 			"description": "TV Show Manager",
 			"installselected": "ON"
 		},
