@@ -1,8 +1,40 @@
 {
 	"software": [
 		{ 
-			"title": "Portainer",
-			"install-script-default": "sudo docker run -d  --name=portainer --restart=always -p 9000:9000  -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer"
+			"name": "Portainer",
+			"description": "Dashboard for managing dockers",
+			"installselected": "OFF",
+			"installscriptdefault": "sudo docker run -d  --name=portainer --restart=always -p 9000:9000  -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer"
+		},
+		{
+			"name": "Portainer",
+			"description": "TV Show Manager",
+			"installselected": "ON"
+		},
+		{
+			"name": "Radarr",
+			"description": "Movie Manager",
+			"installselected": "ON"
+		},
+		{
+			"name": "Deluge",
+			"description": "BitTorrent Download Manager",
+			"installselected": "ON"
+		},
+		{
+			"name": "Plex",
+			"description": "Media Centre Manager",
+			"installselected": "ON"
+		},
+		{
+			"name": "Jackett",
+			"description": "Torrent Indexer",
+			"installselected": "ON"
+		},
+		{
+			"name": "Cardigann",
+			"description": "Torrent Indexer (no longer supported)",
+			"installselected": "ON"
 		}
 	]
 }
