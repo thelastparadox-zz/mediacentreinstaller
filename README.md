@@ -19,7 +19,7 @@ It's currently a work in progress, but if there are any issues, please post on t
 ```
 wget https://raw.githubusercontent.com/thelastparadox/mediacentreinstaller/master/mediacentreinstaller.sh 
 
-./mediacentreinstaller.sh
+bash mediacentreinstaller.sh
 ```
 
 ---

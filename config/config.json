@@ -1,11 +1,6 @@
 {
+	"version": "1.0.1",
 	"software": [
-		{ 
-			"name": "Portainer",
-			"description": "Dashboard for managing dockers",
-			"installselected": "OFF",
-			"installscriptdefault": "sudo docker run -d  --name=portainer --restart=always -p 9000:9000  -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer"
-		},
 		{
 			"name": "Sonarr",
 			"description": "TV Show Manager",
@@ -31,10 +26,11 @@
 			"description": "Torrent Indexer",
 			"installselected": "ON"
 		},
-		{
-			"name": "Cardigann",
-			"description": "Torrent Indexer (no longer supported)",
-			"installselected": "ON"
+		{ 
+			"name": "Portainer",
+			"description": "Dashboard for managing dockers",
+			"installselected": "OFF",
+			"installscriptdefault": "sudo docker run -d  --name=portainer --restart=always -p 9000:9000  -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer"
 		}
 	]
 }

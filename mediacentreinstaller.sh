@@ -19,30 +19,15 @@ DEFAULT_DOWNLOAD_LOCATION="/NAS/downloads"
 DEFAULT_DOCKER_LOCATION="/NAS/docker"
 DEFAULT_TVSHOWS_LOCATION="/NAS/video/tvshows"
 DEFAULT_MOVIES_LOCATION="/NAS/video/movies"
-INSTALL_COMMAND_SONARR="sudo docker run --restart=always -d --name=sonarr -p 8989:8989 -e PUID=1000 -e PGID=1000 -v /dev/rtc:/dev/rtc:ro -e TZ="Europe/London" -v "$DOCKER_LOCATION"/sonarr/config:/config -v "$TVSHOWS_LOCATION":/tv -v "$DOWNLOADS_LOCATION":/downloads -v "$DOWNLOADS_LOCATION":/NAS/downloads -v "$TVSHOWS_LOCATION":"$TVSHOWS_LOCATION" linuxserver/sonarr $QUIET_MODE"
 CONTINUE=true
 LOG_FILE="$(dirname $0)/${THEME_NAME_SHORT_NAME,,}-log-$(date +%Y-%m-%d).log"
 LOGFILE_DATEFORMAT="+%Y-%m-%d:%H:%M:%S"
 
-# Install Tools required for parsing JSON
-JQ_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' jq|grep "install ok installed")
-
-if [[ $JQ_INSTALLED == *"install ok installed"* ]]; then
-	echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Installing JQ to parse config" >> $LOG_FILE
-	INSTALL_JQ="$(sudo apt-get update 2>&1 && sudo apt-get -y install jq 2>&1)"
-fi
-
-# Get Configuration
-CONFIG="$(curl -s 'https://raw.githubusercontent.com/thelastparadox/mediacentreinstaller/master/config/config.json')"
-SOFTWARE_NUM_ITEMS=$(echo $CONFIG | jq '.software | length')
-
-# Intro
-whiptail --title "$THEME_NAME_LONG_NAME $VERSION" --msgbox "Welcome to the $THEME_NAME_LONG_NAME. This guided installer will download, install and configure any software you choose by using the CE edition of Docker. Please click OK to continue." 12 78
-
-# Beginning Install
-echo -e "$(date +%Y-%m-%d:%H:%M:%S) $THEME_BOFLINE Beginning installation..." >> $LOG_FILE
+echo -e "$THEME_BOFLINE Loading installer..."
+echo -e "$(date +%Y-%m-%d:%H:%M:%S) $THEME_BOFLINE Installer initiated..." >> $LOG_FILE
 
 # Check to see if platform is Ubuntu
+echo -e "$THEME_BOFLINE Checking system requirements..."
 OS_1="$(gawk -F= '/^NAME/{print $2}' /etc/os-release)"
 OS="${OS_1//\"}"
 
@@ -54,20 +39,36 @@ else
   echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE OS confirmed as Ubuntu" >> $LOG_FILE
 fi
 
+# Install Tools required for parsing JSON
+
+JQ_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' jq|grep "install ok installed")
+if [[ $JQ_INSTALLED != *"install ok installed"* ]]; then
+	echo -e "$THEME_BOFLINE Installing tools..."
+	echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Installing JQ to parse config" >> $LOG_FILE
+	INSTALL_JQ="$(sudo apt-get update 2>&1 && sudo apt-get -y install jq 2>&1)"
+fi
+
+# Get Configuration
+echo -e "$THEME_BOFLINE Pulling latest configuration..."
+CONFIG="$(curl -s 'https://raw.githubusercontent.com/thelastparadox/mediacentreinstaller/master/config/config.json')"
+SOFTWARE_NUM_ITEMS=$(echo $CONFIG | jq '.software | length')
+
+# Intro
+whiptail --title "$THEME_NAME_LONG_NAME $VERSION" --msgbox "Welcome to the $THEME_NAME_LONG_NAME. This guided installer will download, install and configure any software you choose by using the CE edition of Docker. Please click OK to continue." 12 78
+
+# Beginning Install
+echo -e "$(date +%Y-%m-%d:%H:%M:%S) $THEME_BOFLINE Beginning installation..." >> $LOG_FILE
+
 # Generate Install Software List
 SOFTWARESELECTLIST=()
 for ((i=0; i<$SOFTWARE_NUM_ITEMS; i++))
 do
-    #SOFTWARESELECTLIST+="\"$(echo $CONFIG | jq -r .software[$i].name)\" \"$(echo $CONFIG | jq -r .software[$i].description)\" $(echo $CONFIG | jq -r .software[$i].installselected) "
-    SOFTWARESELECTLIST+="\"$(echo $CONFIG | jq -r .software[$i].name)\" " 
+    SOFTWARESELECTLIST+=("$(echo $CONFIG | jq -r .software[$i].name)" "$(echo $CONFIG | jq -r .software[$i].description)" $(echo $CONFIG | jq -r .software[$i].installselected))
 done
-
-echo $SOFTWARESELECTLIST
-#exit
 
 # Select INSTALL_CHOICES to Install
 if [[ $CONTINUE == true ]]; then
-  INSTALL_CHOICES=$(whiptail --title "Select Software" --checklist "Select the software you would like to install..." 20 60 8 $SOFTWARESELECTLIST 3>&1 1>&2 2>&3)
+  INSTALL_CHOICES=$(whiptail --title "Select Software" --checklist "Select the software you would like to install..." 20 60 $SOFTWARE_NUM_ITEMS "${SOFTWARESELECTLIST[@]}" 3>&1 1>&2 2>&3)
   INSTALL_CHOICES="${INSTALL_CHOICES//\"/}"
   echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Install choices are: $INSTALL_CHOICES" >> $LOG_FILE
 fi
@@ -121,41 +122,45 @@ if [[ $CONTINUE == true && $INSTALL_CHOICES != "" ]]; then
   
     { # Start Progress Guage
 
-      # Install Step 1: Check to see if Docker is installed
-      sleep 0.5
-      echo -e "XXX\n0\nInstalling docker... \nXXX"
+		# Install Step 1: Check to see if Docker is installed
+		sleep 0.5
+		echo -e "XXX\n0\nInstalling docker... \nXXX"
 
-      echo -ne "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Checking if Docker installed..." >> $LOG_FILE
+		echo -ne "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Checking if Docker installed..." >> $LOG_FILE
 
-      DOCKER_INSTALLED="$(docker -v)" 
+		DOCKER_INSTALLED="$(docker -v)" 
 
-      if [[ $DOCKER_INSTALLED == *"not installed"* ]]; then
-        # Install Docker
-        echo -e "$THEME_NOT_INSTALLED" >> $LOG_FILE
-        echo -e "$THEME_BOFLINE Installing Docker...\n" >> $LOG_FILE
-        sudo apt-get update && sudo apt-get install linux-image-extra-$(uname -r) linux-image-extra-virtual && sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-        sudo apt-get update
-        sudo apt-get install docker
-      else
-        echo -e "$THEME_INSTALLED" >> $LOG_FILE
-      fi
+		if [[ $DOCKER_INSTALLED == *"not installed"* ]]; then
+		# Install Docker
+		echo -e "$THEME_NOT_INSTALLED" >> $LOG_FILE
+		echo -e "$THEME_BOFLINE Installing Docker...\n" >> $LOG_FILE
+		sudo apt-get update && sudo apt-get install linux-image-extra-$(uname -r) linux-image-extra-virtual && sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
+		curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+		sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+		sudo apt-get update
+		sudo apt-get install docker
+		else
+		echo -e "$THEME_INSTALLED" >> $LOG_FILE
+		fi
 
-      # Install Step 2: Stop any existing dockers
-      sleep 0.5
-      echo -e "XXX\n10\nStopping any existing dockers... \nXXX"
+		# Install Step 2: Stop any existing dockers
+		sleep 0.5
+		echo -e "XXX\n10\nStopping any existing dockers... \nXXX"
 
-      IFS=', ' read -r -a INSTALL_CHOICES <<< "$INSTALL_CHOICES"
-      for i in "${INSTALL_CHOICES[@]}"
-      do
-         # do whatever on $i
-         if [[ "$(sudo docker inspect --format=\"{{.State.Running}}\" ${i,,} 2> /dev/null)" == true ]]; then
-            echo -ne "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Stopping ${i,,}..."  >> $LOG_FILE
-            sudo docker rm --force "${i,,}" > /dev/null
-            echo -e "$THEME_OK" >> $LOG_FILE
-         fi
-      done
+		IFS=', ' read -r -a INSTALL_CHOICES <<< "$INSTALL_CHOICES"
+		for i in "${INSTALL_CHOICES[@]}"
+		do
+			# Stop existing docker
+			if [[ "$(sudo docker inspect --format=\"{{.State.Running}}\" ${i,,} 2> /dev/null)" == true ]]; then
+				echo -ne "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Stopping ${i,,}..."  >> $LOG_FILE
+				sudo docker rm --force "${i,,}" > /dev/null
+				echo -e "$THEME_OK" >> $LOG_FILE
+			fi
+
+			# Install new docker (using JSON config file still to be completed)
+
+			## $(echo $CONFIG | jq -r .software[$i].name)
+		done
 
       # Check if the user wants to use Portainer
       if [[ $VPN="yes" ]]; then

@@ -1,0 +1,7 @@
+language: generic
+
+sudo: required
+
+after_success: |
+  wget https://raw.githubusercontent.com/thelastparadox/mediacentreinstaller/master/mediacentreinstaller.sh
+  bash mediacentreinstaller.sh --headless
