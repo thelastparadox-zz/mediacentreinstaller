@@ -22,42 +22,89 @@ DEFAULT_MOVIES_LOCATION="/NAS/video/movies"
 CONTINUE=true
 LOG_FILE="$(dirname $0)/${THEME_NAME_SHORT_NAME,,}-log-$(date +%Y-%m-%d).log"
 LOGFILE_DATEFORMAT="+%Y-%m-%d:%H:%M:%S"
+TESTING=false
+CONFIG=""
+SOFTWARE_NUM_ITEMS=""
 
-echo -e "$THEME_BOFLINE Loading installer..."
-echo -e "$(date +%Y-%m-%d:%H:%M:%S) $THEME_BOFLINE Installer initiated..." >> $LOG_FILE
+# Collect Arguments (if any)
+case "$1" in
+	"--testing") TESTING=true
+	;;
+esac
 
-# Check to see if platform is Ubuntu
-echo -e "$THEME_BOFLINE Checking system requirements..."
-OS_1="$(gawk -F= '/^NAME/{print $2}' /etc/os-release)"
-OS="${OS_1//\"}"
+function log_message() # Variables: MESSAGE
+{
+	echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE : $1" >> $LOG_FILE
+}
 
-if [[ OS -ne "Ubuntu" ]]; then
-  whiptail --title "ERROR" --msgbox "Unfortunately this installer is only configured for Ubuntu at the moment." 12 78
-  CONTINUE=false
-  echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE OS is not compatible with installer ($OS)" >> $LOG_FILE
-else
-  echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE OS confirmed as Ubuntu" >> $LOG_FILE
-fi
+function display_window_message() # Variables: TITLE, MESSAGE
+{
+	if [[ $TESTING == true ]]; then
+		echo "$1: $2"
+	else	
+		whiptail --title "$1" --msgbox "$2" 12 78
+	fi
+}
 
-# Install Tools required for parsing JSON
+display_progress_bar()
+{
+	if [[ $TESTING == true ]]; then
+		echo "$1"
+	else	
+		whiptail --title "Preparing" --gauge "Please wait while we check a few things..." 6 60 0
+	fi
+}
 
-JQ_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' jq|grep "install ok installed")
-if [[ $JQ_INSTALLED != *"install ok installed"* ]]; then
-	echo -e "$THEME_BOFLINE Installing tools..."
-	echo -e "$(date $LOGFILE_DATEFORMAT) $THEME_BOFLINE Installing JQ to parse config" >> $LOG_FILE
-	INSTALL_JQ="$(sudo apt-get update 2>&1 && sudo apt-get -y install jq 2>&1)"
-fi
 
-# Get Configuration
-echo -e "$THEME_BOFLINE Pulling latest configuration..."
-CONFIG="$(curl -s 'https://raw.githubusercontent.com/thelastparadox/mediacentreinstaller/master/config/config.json')"
-SOFTWARE_NUM_ITEMS=$(echo $CONFIG | jq '.software | length')
+log_message "Installer initiated..."
 
 # Intro
-whiptail --title "$THEME_NAME_LONG_NAME $VERSION" --msgbox "Welcome to the $THEME_NAME_LONG_NAME. This guided installer will download, install and configure any software you choose by using the CE edition of Docker. Please click OK to continue." 12 78
+display_window_message "$THEME_NAME_LONG_NAME $VERSION" "Welcome to the $THEME_NAME_LONG_NAME. This guided installer will download, install and configure any software you choose by using the CE edition of Docker."
+
+{ # Begin Preparation checks
+
+	# Check to see if platform is Ubuntu
+	sleep 0.5
+	echo -e "XXX\n0\nChecking system requirements... \nXXX"
+
+	OS_1="$(gawk -F= '/^NAME/{print $2}' /etc/os-release)"
+	OS="${OS_1//\"}"
+
+	if [[ OS -ne "Ubuntu" ]]; then
+	  display_window_message "ERROR" "Unfortunately this installer is only configured for Ubuntu at the moment."
+	  log_message "OS is not compatible with installer ($OS)"
+	  CONTINUE=false
+	else
+	  log_message "OS confirmed as Ubuntu"
+	fi
+
+	# Install Tools required for parsing JSON
+	sleep 0.5
+	echo -e "XXX\n25\nChecking required tools are installed... \nXXX"
+	JQ_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' jq|grep "install ok installed")
+	if [[ $JQ_INSTALLED != *"install ok installed"* ]]; then
+		sleep 0.5
+		echo -e "XXX\n40\nInstalling JQ ... \nXXX"
+		log_message "Installing JQ to parse config"
+		INSTALL_JQ="$(sudo apt-get update 2>&1 && sudo apt-get -y install jq 2>&1)"
+	else
+		log_message "JQ already installed...skipping"
+	fi
+
+	# Get Configuration
+	sleep 0.5
+	echo -e "XXX\n75\nPulling latest configuration... \nXXX"
+	log_message "Pulling configuration"
+	CONFIG="$(curl -s 'https://raw.githubusercontent.com/thelastparadox/mediacentreinstaller/master/config/config.json')"
+	SOFTWARE_NUM_ITEMS=$(echo $CONFIG | jq '.software | length')
+
+} > >(display_progress_bar)
+
+echo $CONFIG
+exit
 
 # Beginning Install
-echo -e "$(date +%Y-%m-%d:%H:%M:%S) $THEME_BOFLINE Beginning installation..." >> $LOG_FILE
+log_message "Beginning installation..."
 
 # Generate Install Software List
 SOFTWARESELECTLIST=()

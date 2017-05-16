@@ -1,4 +1,5 @@
 # MediaCentreInstaller
+<img src="https://travis-ci.org/thelastparadox/mediacentreinstaller.svg?branch=master" />
 ## Description
 A simple, user-friendly bash script for installing media centre software using Docker on Ubuntu
 It currently supports the following software:
